@@ -26,7 +26,6 @@ const UserModal = ({ user, isOpen, onClose, onSave }: UserModalProps) => {
         email: user.email,
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        // Don't include password when editing
       });
     } else {
       setFormData({

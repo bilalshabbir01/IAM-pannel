@@ -1,5 +1,6 @@
-// src/components/common/Sidebar.tsx
+import { useSelector } from 'react-redux';
 import { NavLink } from 'react-router-dom';
+import { RootState } from 'store';
 
 interface NavigationItem {
   name: string;
@@ -8,6 +9,11 @@ interface NavigationItem {
 }
 
 function Sidebar() {
+  const rawPermissions = useSelector((state: RootState) => state.auth.permissions);
+  const permissions = rawPermissions && rawPermissions.length > 0
+    ? rawPermissions
+    : JSON.parse(localStorage.getItem('permissions') || '[]');
+
   const navigation: NavigationItem[] = [
     { name: 'Dashboard', href: '/', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
     { name: 'Users', href: '/users', icon: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' },
@@ -16,6 +22,11 @@ function Sidebar() {
     { name: 'Modules', href: '/modules', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
     { name: 'Permissions', href: '/permissions', icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
   ];
+
+  // Check if user has any permission for a given module
+  const hasModulePermission = (moduleName: string) => {
+    return permissions.some((perm: any) => perm.module === moduleName);
+  };
 
   return (
     <div className="hidden md:flex md:flex-shrink-0">
@@ -26,36 +37,40 @@ function Sidebar() {
           </div>
           <div className="flex-1 flex flex-col overflow-y-auto">
             <nav className="flex-1 px-2 py-4 bg-gray-800 space-y-1">
-              {navigation.map((item) => (
-                <NavLink
-                  key={item.name}
-                  to={item.href}
-                  className={({ isActive }) =>
-                    `${
-                      isActive
-                        ? 'bg-gray-900 text-white'
-                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`
-                  }
-                >
-                  <svg
-                    className="mr-3 h-6 w-6 text-gray-400"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    aria-hidden="true"
+              {navigation
+                .filter(
+                  (item) => item.name === 'Dashboard' || hasModulePermission(item.name)
+                )
+                .map((item) => (
+                  <NavLink
+                    key={item.name}
+                    to={item.href}
+                    className={({ isActive }) =>
+                      `${
+                        isActive
+                          ? 'bg-gray-900 text-white'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      } group flex items-center px-2 py-2 text-sm font-medium rounded-md`
+                    }
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d={item.icon}
-                    />
-                  </svg>
-                  {item.name}
-                </NavLink>
-              ))}
+                    <svg
+                      className="mr-3 h-6 w-6 text-gray-400"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d={item.icon}
+                      />
+                    </svg>
+                    {item.name}
+                  </NavLink>
+                ))}
             </nav>
           </div>
         </div>

@@ -5,13 +5,19 @@ import { getUserPermissions } from '../features/auth/authSlice';
 import { AppDispatch, RootState } from '../store';
 import DashboardLayout from '../components/layouts/DashboardLayout';
 import axios from '../api/axios';
-import { SimulationRequest, SimulationResult, Permission, Module } from '../types';
+import { SimulationRequest, SimulationResult, Module } from '../types';
+
+// Updated Permission interface to match the new structure
+interface Permission {
+  action: string;
+  module: string;
+}
 
 function Dashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const { user, permissions, isLoading } = useSelector((state: RootState) => state.auth);
   const { modules } = useSelector((state: RootState) => state.modules);
-  
+  console.log(permissions,'permissions')
   const [simulationData, setSimulationData] = useState<SimulationRequest>({
     module_id: 0,
     action: 'read'
@@ -33,29 +39,64 @@ function Dashboard() {
     });
   };
 
+  const getModuleName = (moduleId: number): string => {
+    const module = modules.find((m) => m.id === moduleId);
+    return module?.name || 'Unknown';
+  };
+
   const handleSimulationSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSimulationLoading(true);
+  
+    const moduleName = getModuleName(simulationData.module_id);
+  
     try {
-      const response = await axios.post('/api/permissions/simulate-action', simulationData);
+      const response = await axios.post('/api/permissions/simulate-action', {
+        module: moduleName,
+        action: simulationData.action,
+      });
+  
+      const allowed = response.data.allowed;
+  
       setSimulationResult({
-        success: true,
-        message: response.data.message || 'Action is permitted'
+        success: allowed,
+        message: allowed
+          ? `✅ You are allowed to ${simulationData.action} ${moduleName}`
+          : `⛔ You are NOT allowed to ${simulationData.action} ${moduleName}`,
       });
     } catch (error: any) {
       setSimulationResult({
         success: false,
-        message: error.response?.data?.message || 'Action not permitted'
+        message: error.response?.data?.message || 'Something went wrong!',
       });
     } finally {
       setSimulationLoading(false);
     }
   };
+  // Group permissions by module for display with new structure
+  const groupedPermissions = permissions ? permissions.reduce((acc: Record<string, string[]>, permission: Permission) => {
+    const moduleName = permission.module || 'Unknown';
+    if (!acc[moduleName]) {
+      acc[moduleName] = [];
+    }
+    acc[moduleName].push(permission.action);
+    return acc;
+  }, {}) : {};
 
-  // Helper function to get module name from ID
-  const getModuleName = (moduleId: number): string => {
-    const module = modules.find(m => m.id === moduleId);
-    return module ? module.name : 'Unknown';
+  // Get action color based on action type
+  const getActionColor = (action: string) => {
+    switch(action) {
+      case 'create':
+        return { bg: 'bg-green-100', text: 'text-green-800' };
+      case 'read':
+        return { bg: 'bg-blue-100', text: 'text-blue-800' };
+      case 'update':
+        return { bg: 'bg-yellow-100', text: 'text-yellow-800' };
+      case 'delete':
+        return { bg: 'bg-red-100', text: 'text-red-800' };
+      default:
+        return { bg: 'bg-gray-100', text: 'text-gray-800' };
+    }
   };
 
   return (
@@ -69,7 +110,7 @@ function Dashboard() {
           </p>
           {user && (
             <div className="mt-4 p-4 bg-blue-50 rounded-md">
-              <p className="text-blue-800">Logged in as: <span className="font-semibold">{user.user.username}</span></p>
+              <p className="text-blue-800">Logged in as: <span className="font-semibold">{user?.user?.username}</span></p>
               <p className="text-sm text-blue-600">{user.email}</p>
             </div>
           )}
@@ -80,8 +121,8 @@ function Dashboard() {
           <h3 className="text-xl font-semibold text-gray-800 mb-4">Your Permissions</h3>
           
           {isLoading ? (
-            <div className="text-center py-4">
-              <p>Loading permissions...</p>
+            <div className="flex justify-center py-6">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
             </div>
           ) : permissions && permissions.length > 0 ? (
             <div className="overflow-x-auto">
@@ -103,32 +144,26 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {/* Group permissions by module */}
-                  {Object.entries(
-                    permissions.reduce((acc: Record<number, string[]>, permission: Permission) => {
-                      if (!acc[permission.module_id]) {
-                        acc[permission.module_id] = [];
-                      }
-                      acc[permission.module_id].push(permission.action);
-                      return acc;
-                    }, {})
-                  ).map(([moduleId, actions], index) => (
-                    <tr key={index}>
+                  {Object.entries(groupedPermissions).map(([moduleName, actions], index) => (
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {getModuleName(parseInt(moduleId))}
+                          {moduleName}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4">
                         <div className="flex flex-wrap gap-2">
-                          {actions.map((action, i) => (
-                            <span 
-                              key={i} 
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
-                            >
-                              {action}
-                            </span>
-                          ))}
+                          {actions.map((action, i) => {
+                            const colors = getActionColor(action);
+                            return (
+                              <span 
+                                key={i} 
+                                className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${colors.bg} ${colors.text}`}
+                              >
+                                {action}
+                              </span>
+                            );
+                          })}
                         </div>
                       </td>
                     </tr>
@@ -137,8 +172,12 @@ function Dashboard() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-4">
-              <p className="text-gray-500">No permissions found. You might need to be assigned to a group.</p>
+            <div className="text-center py-8 bg-gray-50 rounded-lg">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No permissions found</h3>
+              <p className="mt-1 text-sm text-gray-500">You might need to be assigned to a group with permissions.</p>
             </div>
           )}
         </section>
@@ -198,14 +237,41 @@ function Dashboard() {
                 className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 disabled={simulationLoading}
               >
-                {simulationLoading ? 'Testing...' : 'Test Permission'}
+                {simulationLoading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Testing...
+                  </>
+                ) : 'Test Permission'}
               </button>
             </div>
 
             {simulationResult && (
-              <div className={`mt-4 p-4 rounded-md ${simulationResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-                <p className="font-medium">{simulationResult.success ? 'Allowed' : 'Denied'}</p>
-                <p className="text-sm">{simulationResult.message}</p>
+              <div className={`mt-4 p-4 rounded-md ${simulationResult.success ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className="flex">
+                  <div className="flex-shrink-0">
+                    {simulationResult.success ? (
+                      <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    ) : (
+                      <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="ml-3">
+                    <h3 className={`text-sm font-medium ${simulationResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                      {simulationResult.success ? 'Allowed' : 'Denied'}
+                    </h3>
+                    <div className={`mt-2 text-sm ${simulationResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                      <p>{simulationResult.message}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </form>

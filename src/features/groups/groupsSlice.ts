@@ -61,6 +61,20 @@ export const createGroup = createAsyncThunk<
   }
 });
 
+export const assignRolesToGroup = createAsyncThunk<
+  { groupId: number, roleIds: number[] },
+  { groupId: number, roleIds: number[] },
+  { rejectValue: string }
+>('groups/assignRolesToGroup', async ({ groupId, roleIds }, thunkAPI) => {
+  try {
+    await instance.post(`/api/roles/groups/${groupId}/roles`, { roleIds });
+    return { groupId, roleIds };
+  } catch (error: any) {
+    const message = error.response?.data?.message || error.message || error.toString();
+    return thunkAPI.rejectWithValue(message);
+  }
+});
+
 // Update group
 export const updateGroup = createAsyncThunk<
   Group,

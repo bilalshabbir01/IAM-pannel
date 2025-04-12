@@ -48,7 +48,7 @@ export const createUser = createAsyncThunk<
   { rejectValue: string }
 >('users/create', async (userData, thunkAPI) => {
   try {
-    const response = await instance.post('/api/users', userData);
+    const response = await instance.post('/api/auth/register', userData);
     return response.data;
   } catch (error: any) {
     const message = 

@@ -1,38 +1,52 @@
 // src/pages/Modules.tsx
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { 
-  getModules, 
-  createModule, 
-  updateModule, 
-  deleteModule, 
-  reset 
+import {
+  getModules,
+  createModule,
+  updateModule,
+  deleteModule,
+  reset,
 } from '../features/modules/modulesSlice';
 import { AppDispatch, RootState } from '../store';
 import DashboardLayout from '../components/layouts/DashboardLayout';
 import ModuleModal from '../components/modules/ModuleModal';
 import { Module } from '../types';
+import { toast } from 'react-toastify';
+
+const hasPermission = (
+  permissions: { module: string; action: string }[],
+  module: string,
+  action: string
+): boolean => {
+  return permissions.some((perm) => perm.module === module && perm.action === action);
+};
 
 function Modules() {
   const dispatch = useDispatch<AppDispatch>();
-  const { modules, isLoading, isError, message } = useSelector(
-    (state: RootState) => state.modules
-  );
-  
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const { modules, isLoading, isError, message } = useSelector((state: RootState) => state.modules);
+  const rawPermissions = useSelector((state: RootState) => state.auth.permissions);
+  const permissions = rawPermissions && rawPermissions.length > 0
+  ? rawPermissions
+  : JSON.parse(localStorage.getItem('permissions') || '[]');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
   useEffect(() => {
-    // Fetch modules on component mount
     dispatch(getModules());
-    
     return () => {
       dispatch(reset());
     };
   }, [dispatch]);
 
   const openModal = (module: Module | null = null) => {
+    const action = module ? 'update' : 'create';
+    if (!hasPermission(permissions, 'Modules', action)) {
+      toast.error(`⛔ You don't have permission to ${action} modules.`);
+      return;
+    }
     setCurrentModule(module);
     setIsModalOpen(true);
   };
@@ -43,43 +57,49 @@ function Modules() {
   };
 
   const handleSaveModule = async (moduleData: Partial<Module>) => {
+    const action = currentModule ? 'update' : 'create';
+    if (!hasPermission(permissions, 'Modules', action)) {
+      toast.error(`⛔ You don't have permission to ${action} modules.`);
+      return;
+    }
+
     try {
       if (currentModule) {
-        // Editing existing module
-        await dispatch(updateModule({ 
-          ...currentModule, 
-          ...moduleData,
-          name: moduleData.name || currentModule.name // Ensure name is not lost
-        } as Module)).unwrap();
+        await dispatch(
+          updateModule({
+            ...currentModule,
+            ...moduleData,
+            name: moduleData.name || currentModule.name,
+          } as Module)
+        ).unwrap();
       } else {
-        // Creating new module
-        if (!moduleData.name || moduleData.name.trim() === '') {
-          return; // Don't create module with empty name
-        }
-        await dispatch(createModule({ 
-          name: moduleData.name.trim() 
-        })).unwrap();
+        if (!moduleData.name?.trim()) return;
+        await dispatch(createModule({ name: moduleData.name.trim() })).unwrap();
       }
-      
-      // After successful operation, refresh the modules list
       await dispatch(getModules()).unwrap();
       closeModal();
     } catch (error) {
       console.error('Error saving module:', error);
-      // Keep modal open on error
     }
   };
 
   const openDeleteConfirmation = (moduleId: number) => {
+    if (!hasPermission(permissions, 'Modules', 'delete')) {
+      toast.error(`⛔ You don't have permission to delete modules.`);
+      return;
+    }
     setConfirmDelete(moduleId);
   };
 
   const handleDeleteModule = async (moduleId: number) => {
+    if (!hasPermission(permissions, 'Modules', 'delete')) {
+      toast.error(`⛔ You don't have permission to delete modules.`);
+      return;
+    }
     try {
       await dispatch(deleteModule(moduleId)).unwrap();
-      setConfirmDelete(null);
-      // Refresh the modules list after deletion
       await dispatch(getModules()).unwrap();
+      setConfirmDelete(null);
     } catch (error) {
       console.error('Error deleting module:', error);
     }
@@ -98,7 +118,7 @@ function Modules() {
       </div>
 
       {isError && (
-        <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <div className="mb-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative">
           <span className="block sm:inline">{message}</span>
         </div>
       )}
@@ -108,7 +128,7 @@ function Modules() {
           <div className="text-center py-4">
             <p>Loading modules...</p>
           </div>
-        ) : modules && modules.length > 0 ? (
+        ) : modules.length > 0 ? (
           <ul className="divide-y divide-gray-200">
             {modules.map((module) => (
               <li key={module.id}>
@@ -150,7 +170,6 @@ function Modules() {
         )}
       </div>
 
-      {/* Module Modal */}
       <ModuleModal
         module={currentModule}
         isOpen={isModalOpen}
@@ -158,7 +177,6 @@ function Modules() {
         onSave={handleSaveModule}
       />
 
-      {/* Delete Confirmation Modal */}
       {confirmDelete !== null && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
           <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto p-6">
@@ -171,14 +189,14 @@ function Modules() {
             <div className="flex justify-end space-x-2">
               <button
                 type="button"
-                className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="bg-white py-2 px-4 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50"
                 onClick={() => setConfirmDelete(null)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className="inline-flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
                 onClick={() => handleDeleteModule(confirmDelete)}
               >
                 Delete

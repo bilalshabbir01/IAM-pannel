@@ -93,7 +93,10 @@ export const getUserPermissions = createAsyncThunk<
       },
     };
     
-    const response = await instance.get('/api/permissions', config);
+    const response = await instance.get('/api/permissions/me/permissions', config);
+    if (response.data && response.data.permissions) {
+      localStorage.setItem('permissions', JSON.stringify(response.data.permissions));
+    }
     return response.data;
   } catch (error: any) {
     const message = 

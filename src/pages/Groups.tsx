@@ -1,25 +1,40 @@
 // src/pages/Groups.tsx
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { 
-  getGroups, 
-  createGroup, 
-  updateGroup, 
-  deleteGroup, 
-  reset 
+import {
+  getGroups,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  reset,
 } from '../features/groups/groupsSlice';
 import { AppDispatch, RootState } from '../store';
 import DashboardLayout from '../components/layouts/DashboardLayout';
 import GroupModal from '../components/groups/GroupModal';
 import GroupUserAssignment from '../components/groups/GroupUserAssignment';
 import { Group } from '../types';
+import { toast } from 'react-toastify';
+
+const hasPermission = (
+  permissions: { module: string; action: string }[],
+  module: string,
+  action: string
+): boolean => {
+  return permissions.some(
+    (perm) => perm.module === module && perm.action === action
+  );
+};
 
 function Groups() {
   const dispatch = useDispatch<AppDispatch>();
+  const rawPermissions = useSelector((state: RootState) => state.auth.permissions);
+  const permissions = rawPermissions && rawPermissions.length > 0
+  ? rawPermissions
+  : JSON.parse(localStorage.getItem('permissions') || '[]');
   const { groups, isLoading, isError, message } = useSelector(
     (state: RootState) => state.groups
   );
-  
+
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [currentGroup, setCurrentGroup] = useState<Group | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
@@ -28,13 +43,17 @@ function Groups() {
 
   useEffect(() => {
     dispatch(getGroups());
-    
     return () => {
       dispatch(reset());
     };
   }, [dispatch]);
 
   const openModal = (group: Group | null = null) => {
+    const action = group ? 'update' : 'create';
+    if (!hasPermission(permissions, 'Groups', action)) {
+      toast.error(`You don't have permission to ${action} groups.`);
+      return;
+    }
     setCurrentGroup(group);
     setIsModalOpen(true);
   };
@@ -45,37 +64,45 @@ function Groups() {
   };
 
   const handleSaveGroup = (groupData: Partial<Group>) => {
+    const action = currentGroup ? 'update' : 'create';
+    if (!hasPermission(permissions, 'Groups', action)) {
+      toast.error(`You don't have permission to ${action} groups.`);
+      return;
+    }
+
     if (currentGroup) {
-      // Update existing group
-      dispatch(updateGroup({ 
-        ...currentGroup, 
-        ...groupData 
-      } as Group));
+      dispatch(updateGroup({ ...currentGroup, ...groupData } as Group));
     } else {
-      // Create new group
-      // Only pass name as that's what the API expects for creation
-      // The API will handle setting created_at
       dispatch(createGroup(groupData as Group));
     }
     closeModal();
-    
-    // Refresh the groups list to get updated data
-    // This ensures we have the latest data including dates
     setTimeout(() => {
       dispatch(getGroups());
     }, 300);
   };
 
   const openDeleteConfirmation = (groupId: number) => {
+    if (!hasPermission(permissions, 'Groups', 'delete')) {
+      toast.error("You don't have permission to delete groups.");
+      return;
+    }
     setConfirmDelete(groupId);
   };
 
   const handleDeleteGroup = (groupId: number) => {
+    if (!hasPermission(permissions, 'Groups', 'delete')) {
+      toast.error("You don't have permission to delete groups.");
+      return;
+    }
     dispatch(deleteGroup(groupId));
     setConfirmDelete(null);
   };
 
   const openUserAssignment = (group: Group) => {
+    if (!hasPermission(permissions, 'Groups', 'update')) {
+      toast.error("You don't have permission to assign users.");
+      return;
+    }
     setSelectedGroup(group);
     setUserAssignmentOpen(true);
   };
@@ -85,7 +112,6 @@ function Groups() {
     setSelectedGroup(null);
   };
 
-  // Helper function to safely format dates
   const formatDate = (dateString: string | Date | undefined) => {
     if (!dateString) return 'N/A';
     try {
@@ -142,15 +168,14 @@ function Groups() {
                         Edit
                       </button>
                       <button
-                        onClick={() => openDeleteConfirmation(group.id)}
+                        onClick={() => handleDeleteGroup(group.id)}
                         className="text-red-600 hover:text-red-800"
                       >
                         Delete
                       </button>
                     </div>
                   </div>
-                  
-                  {/* Display users in group */}
+
                   {group.users && group.users.length > 0 && (
                     <div className="mt-2">
                       <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -168,8 +193,7 @@ function Groups() {
                       </div>
                     </div>
                   )}
-                  
-                  {/* Display roles in group */}
+
                   {group.roles && group.roles.length > 0 && (
                     <div className="mt-2">
                       <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -198,7 +222,6 @@ function Groups() {
         )}
       </div>
 
-      {/* Group Modal */}
       <GroupModal
         group={currentGroup}
         isOpen={isModalOpen}
@@ -206,7 +229,6 @@ function Groups() {
         onSave={handleSaveGroup}
       />
 
-      {/* Delete Confirmation Modal */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
           <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-auto p-6">
@@ -236,12 +258,8 @@ function Groups() {
         </div>
       )}
 
-      {/* User Assignment Modal */}
       {userAssignmentOpen && selectedGroup && (
-        <GroupUserAssignment 
-          group={selectedGroup} 
-          onClose={closeUserAssignment} 
-        />
+        <GroupUserAssignment group={selectedGroup} onClose={closeUserAssignment} />
       )}
     </DashboardLayout>
   );

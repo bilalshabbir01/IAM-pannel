@@ -9,7 +9,8 @@ interface NavbarProps {
 
 function Navbar({ user, onLogout }: NavbarProps) {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
-
+  
+  console.log(user?.user?.username,'useruseruseruser')
   return (
     <header className="bg-white shadow">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -48,7 +49,7 @@ function Navbar({ user, onLogout }: NavbarProps) {
                   >
                     {user && (
                       <div className="px-4 py-2 text-sm text-gray-700">
-                        <div>{`${user.first_name} ${user.last_name}`}</div>
+                        <div>{user?.user?.username}</div>
                         <div className="text-xs text-gray-500">{user.email}</div>
                       </div>
                     )}

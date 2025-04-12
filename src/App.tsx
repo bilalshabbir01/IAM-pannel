@@ -11,6 +11,8 @@ import Roles from './pages/Roles';
 import Modules from './pages/Modules';
 import Permissions from './pages/Permissions';
 import { ReactNode } from 'react';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -70,6 +72,7 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
+      <ToastContainer position="top-right" autoClose={3000} />
     </Router>
   );
 }
