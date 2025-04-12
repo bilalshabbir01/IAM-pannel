@@ -29,8 +29,8 @@ function Groups() {
   const dispatch = useDispatch<AppDispatch>();
   const rawPermissions = useSelector((state: RootState) => state.auth.permissions);
   const permissions = rawPermissions && rawPermissions.length > 0
-  ? rawPermissions
-  : JSON.parse(localStorage.getItem('permissions') || '[]');
+    ? rawPermissions
+    : JSON.parse(localStorage.getItem('permissions') || '[]');
   const { groups, isLoading, isError, message } = useSelector(
     (state: RootState) => state.groups
   );
@@ -125,12 +125,15 @@ function Groups() {
     <DashboardLayout>
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-800">Group Management</h1>
-        <button
-          onClick={() => openModal()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Add Group
-        </button>
+        {
+          hasPermission(permissions, 'Permissions', "create") &&
+          <button
+            onClick={() => openModal()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Add Group
+          </button>
+        }
       </div>
 
       {isError && (
@@ -155,24 +158,32 @@ function Groups() {
                       <p className="text-sm text-gray-500">Created: {formatDate(group.created_at)}</p>
                     </div>
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => openUserAssignment(group)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Manage Users
-                      </button>
-                      <button
-                        onClick={() => openModal(group)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeleteGroup(group.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
+                      {
+                        hasPermission(permissions, 'Permissions', "update") &&
+                        <>
+                          <button
+                            onClick={() => openUserAssignment(group)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            Manage Users
+                          </button>
+                          <button
+                            onClick={() => openModal(group)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            Edit
+                          </button>
+                        </>
+                      }
+                      {
+                        hasPermission(permissions, 'Permissions', "delete") &&
+                        <button
+                          onClick={() => handleDeleteGroup(group.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Delete
+                        </button>
+                      }
                     </div>
                   </div>
 

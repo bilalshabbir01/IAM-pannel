@@ -30,8 +30,8 @@ function Roles() {
   const { modules } = useSelector((state: RootState) => state.modules);
   const rawPermissions = useSelector((state: RootState) => state.auth.permissions);
   const permissions = rawPermissions && rawPermissions.length > 0
-  ? rawPermissions
-  : JSON.parse(localStorage.getItem('permissions') || '[]');
+    ? rawPermissions
+    : JSON.parse(localStorage.getItem('permissions') || '[]');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentRole, setCurrentRole] = useState<Role | null>(null);
@@ -123,12 +123,15 @@ function Roles() {
     <DashboardLayout>
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-800">Role Management</h1>
-        <button
-          onClick={() => openModal()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          Add Role
-        </button>
+        {
+          hasPermission(permissions, 'Permissions', "create") &&
+          <button
+            onClick={() => openModal()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            Add Role
+          </button>
+        }
       </div>
 
       {isError && (
@@ -157,24 +160,32 @@ function Roles() {
                       )}
                     </div>
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => openModal(role)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleAssignGroup(role.id)}
-                        className="text-purple-600 hover:text-purple-800"
-                      >
-                        Assign Groups
-                      </button>
-                      <button
-                        onClick={() => openDeleteConfirmation(role.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
+                      {
+                        hasPermission(permissions, 'Permissions', "update") &&
+                        <>
+                          <button
+                            onClick={() => openModal(role)}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleAssignGroup(role.id)}
+                            className="text-purple-600 hover:text-purple-800"
+                          >
+                            Assign Groups
+                          </button>
+                        </>
+                      }
+                      {
+                        hasPermission(permissions, 'Permissions', "delete") &&
+                        <button
+                          onClick={() => openDeleteConfirmation(role.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Delete
+                        </button>
+                      }
                     </div>
                   </div>
 

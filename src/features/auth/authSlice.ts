@@ -55,7 +55,7 @@ export const login = createAsyncThunk<
     if (response.data && response.data.user) {
       localStorage.setItem('user', JSON.stringify(response.data));
     }
-    
+    location.reload()
     return response.data;
   } catch (error: any) {
     const message = 

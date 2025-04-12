@@ -5,7 +5,7 @@ import { getUserPermissions } from '../features/auth/authSlice';
 import { AppDispatch, RootState } from '../store';
 import DashboardLayout from '../components/layouts/DashboardLayout';
 import axios from '../api/axios';
-import { SimulationRequest, SimulationResult, Module } from '../types';
+import { SimulationResult } from '../types';
 
 // Updated Permission interface to match the new structure
 interface Permission {
@@ -13,13 +13,18 @@ interface Permission {
   module: string;
 }
 
+// Updated SimulationRequest interface
+interface SimulationRequest {
+  module: string;
+  action: string;
+}
+
 function Dashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const { user, permissions, isLoading } = useSelector((state: RootState) => state.auth);
-  const { modules } = useSelector((state: RootState) => state.modules);
-  console.log(permissions,'permissions')
+  
   const [simulationData, setSimulationData] = useState<SimulationRequest>({
-    module_id: 0,
+    module: '',
     action: 'read'
   });
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
@@ -31,28 +36,19 @@ function Dashboard() {
   }, [dispatch]);
 
   const handleSimulationChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.name === 'module_id' ? parseInt(e.target.value) : e.target.value;
-    
     setSimulationData({
       ...simulationData,
-      [e.target.name]: value as any
+      [e.target.name]: e.target.value
     });
-  };
-
-  const getModuleName = (moduleId: number): string => {
-    const module = modules.find((m) => m.id === moduleId);
-    return module?.name || 'Unknown';
   };
 
   const handleSimulationSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSimulationLoading(true);
   
-    const moduleName = getModuleName(simulationData.module_id);
-  
     try {
       const response = await axios.post('/api/permissions/simulate-action', {
-        module: moduleName,
+        module: simulationData.module,
         action: simulationData.action,
       });
   
@@ -61,8 +57,8 @@ function Dashboard() {
       setSimulationResult({
         success: allowed,
         message: allowed
-          ? `✅ You are allowed to ${simulationData.action} ${moduleName}`
-          : `⛔ You are NOT allowed to ${simulationData.action} ${moduleName}`,
+          ? `✅ You are allowed to ${simulationData.action} ${simulationData.module}`
+          : `⛔ You are NOT allowed to ${simulationData.action} ${simulationData.module}`,
       });
     } catch (error: any) {
       setSimulationResult({
@@ -73,6 +69,7 @@ function Dashboard() {
       setSimulationLoading(false);
     }
   };
+  
   // Group permissions by module for display with new structure
   const groupedPermissions = permissions ? permissions.reduce((acc: Record<string, string[]>, permission: Permission) => {
     const moduleName = permission.module || 'Unknown';
@@ -190,23 +187,23 @@ function Dashboard() {
           <form onSubmit={handleSimulationSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label htmlFor="module_id" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="module" className="block text-sm font-medium text-gray-700 mb-1">
                   Module
                 </label>
                 <select
-                  id="module_id"
-                  name="module_id"
+                  id="module"
+                  name="module"
                   className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                  value={simulationData.module_id}
+                  value={simulationData.module}
                   onChange={handleSimulationChange}
                   required
                 >
                   <option value="">Select a module</option>
-                  {modules.map((module) => (
-                    <option key={module.id} value={module.id}>
-                      {module.name}
-                    </option>
-                  ))}
+                  <option value="Users">Users</option>
+                  <option value="Groups">Groups</option>
+                  <option value="Permissions">Permissions</option>
+                  <option value="Roles">Roles</option>
+                  <option value="Modules">Modules</option>
                 </select>
               </div>
               <div>

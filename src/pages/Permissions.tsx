@@ -32,8 +32,8 @@ function Permissions() {
   const { modules } = useSelector((state: RootState) => state.modules);
   const rawPermissions = useSelector((state: RootState) => state.auth.permissions);
   const permissions = rawPermissions && rawPermissions.length > 0
-  ? rawPermissions
-  : JSON.parse(localStorage.getItem('permissions') || '[]');
+    ? rawPermissions
+    : JSON.parse(localStorage.getItem('permissions') || '[]');
 
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [currentPermission, setCurrentPermission] = useState<Permission | null>(null);
@@ -120,18 +120,24 @@ function Permissions() {
       <div className="mb-6 flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-800">Permission Management</h1>
         <div className="space-x-2">
-          <button
-            onClick={openAssignmentModal}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-          >
-            Assign to Roles
-          </button>
-          <button
-            onClick={() => openModal()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Add Permission
-          </button>
+          {
+            hasPermission(permissions, 'Permissions', "update") &&
+            <button
+              onClick={openAssignmentModal}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              Assign to Roles
+            </button>
+          }
+          {
+            hasPermission(permissions, 'Permissions', "create") &&
+            <button
+              onClick={() => openModal()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Add Permission
+            </button>
+          }
         </div>
       </div>
 
@@ -175,18 +181,24 @@ function Permissions() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => openModal(permission)}
-                        className="text-blue-600 hover:text-blue-800 mr-3"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => openDeleteConfirmation(permission.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
+                      {
+                        hasPermission(permissions, 'Permissions', "update") &&
+                        <button
+                          onClick={() => openModal(permission)}
+                          className="text-blue-600 hover:text-blue-800 mr-3"
+                        >
+                          Edit
+                        </button>
+                      }
+                      {
+                        hasPermission(permissions, 'Permissions', "delete") &&
+                        <button
+                          onClick={() => openDeleteConfirmation(permission.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Delete
+                        </button>
+                      }
                     </td>
                   </tr>
                 ))}
@@ -207,7 +219,7 @@ function Permissions() {
         onSave={handleSavePermission}
       />
 
-      <RolePermissionAssignment 
+      <RolePermissionAssignment
         isOpen={isAssignmentModalOpen}
         onClose={closeAssignmentModal}
       />
