@@ -57,7 +57,7 @@ function Dashboard() {
     const module = modules.find(m => m.id === moduleId);
     return module ? module.name : 'Unknown';
   };
-console.log(user, "useruseruseruseruseruseruser")
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -69,7 +69,7 @@ console.log(user, "useruseruseruseruseruseruser")
           </p>
           {user && (
             <div className="mt-4 p-4 bg-blue-50 rounded-md">
-              <p className="text-blue-800">Logged in as: <span className="font-semibold">{user.username}</span></p>
+              <p className="text-blue-800">Logged in as: <span className="font-semibold">{user.user.username}</span></p>
               <p className="text-sm text-blue-600">{user.email}</p>
             </div>
           )}

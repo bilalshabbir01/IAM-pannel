@@ -141,7 +141,7 @@ const RolePermissionAssignment = ({ isOpen, onClose }: RolePermissionAssignmentP
                   <option value="">Select a permission</option>
                   {availablePermissions.map((permission) => (
                     <option key={permission.id} value={permission.id}>
-                      {getModuleName(permission.module_id)} - {permission.action}
+                      {permission?.module?.name} - {permission.action}
                     </option>
                   ))}
                 </select>

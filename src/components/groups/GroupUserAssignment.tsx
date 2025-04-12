@@ -21,13 +21,13 @@ const GroupUserAssignment = ({ group, onClose }: GroupUserAssignmentProps) => {
   }, [dispatch]);
 
   // Filter out users who are already in the group
-  const availableUsers = users.filter(user => 
+  const availableUsers = users.filter(user =>
     !group.users?.some(groupUser => groupUser.id === user.id)
   );
 
   const handleAddUser = () => {
     if (selectedUser) {
-      dispatch(assignUserToGroup({ groupId: group.id, userId: selectedUser }));
+      dispatch(assignUserToGroup({ groupId: group.id, userIds: [selectedUser] }));
       setSelectedUser(0);
     }
   };
@@ -109,8 +109,8 @@ const GroupUserAssignment = ({ group, onClose }: GroupUserAssignmentProps) => {
                 return (
                   <li key={user.id} className="py-3 flex justify-between items-center">
                     <div className="text-sm font-medium text-gray-900">
-                      {fullUser ? 
-                        (fullUser.username || `${fullUser.first_name} ${fullUser.last_name}` || fullUser.email) : 
+                      {fullUser ?
+                        (fullUser.username || `${fullUser.first_name} ${fullUser.last_name}` || fullUser.email) :
                         'Unknown User'}
                     </div>
                     <button
