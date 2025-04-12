@@ -37,7 +37,7 @@ function Dashboard() {
     e.preventDefault();
     setSimulationLoading(true);
     try {
-      const response = await axios.post('/simulate-action', simulationData);
+      const response = await axios.post('/api/permissions/simulate-action', simulationData);
       setSimulationResult({
         success: true,
         message: response.data.message || 'Action is permitted'

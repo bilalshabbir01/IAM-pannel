@@ -166,6 +166,24 @@ function Roles() {
                       </div>
                     </div>
                   )}
+                  {/* Display groups in role */}
+                  {Array.isArray(role.groups) && role.groups.length > 0 && (
+                    <div className="mt-2">
+                      <h4 className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Groups
+                      </h4>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        {role.groups.map((group) => (
+                          <span
+                            key={group.id}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {group.name}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </li>
             ))}

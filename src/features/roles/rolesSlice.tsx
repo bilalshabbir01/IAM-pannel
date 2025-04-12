@@ -21,126 +21,108 @@ const initialState: RolesState = {
 
 // Get all roles
 export const getRoles = createAsyncThunk<
-  { roles: Role[] }, 
-  void, 
+  { roles: Role[] },
+  void,
   { rejectValue: string }
 >('roles/getAll', async (_, thunkAPI) => {
   try {
     const response = await instance.get('/api/roles');
     return response.data;
   } catch (error: any) {
-    const message = 
-      (error.response && 
-        error.response.data && 
-        error.response.data.message) || 
-      error.message || 
+    const message =
+      (error.response?.data?.message) ||
+      error.message ||
       error.toString();
-      
     return thunkAPI.rejectWithValue(message);
   }
 });
 
 // Create new role
 export const createRole = createAsyncThunk<
-  Role, 
-  { name: string }, 
+  Role,
+  { name: string },
   { rejectValue: string }
 >('roles/create', async (roleData, thunkAPI) => {
   try {
     const response = await instance.post('/api/roles', roleData);
     return response.data;
   } catch (error: any) {
-    const message = 
-      (error.response && 
-        error.response.data && 
-        error.response.data.message) || 
-      error.message || 
+    const message =
+      (error.response?.data?.message) ||
+      error.message ||
       error.toString();
-      
     return thunkAPI.rejectWithValue(message);
   }
 });
 
 // Update role
 export const updateRole = createAsyncThunk<
-  Role, 
-  Role, 
+  Role,
+  Role,
   { rejectValue: string }
 >('roles/update', async (roleData, thunkAPI) => {
   try {
     const response = await instance.put(`/api/roles/${roleData.id}`, roleData);
     return response.data;
   } catch (error: any) {
-    const message = 
-      (error.response && 
-        error.response.data && 
-        error.response.data.message) || 
-      error.message || 
+    const message =
+      (error.response?.data?.message) ||
+      error.message ||
       error.toString();
-      
     return thunkAPI.rejectWithValue(message);
   }
 });
 
 // Delete role
 export const deleteRole = createAsyncThunk<
-  number, 
-  number, 
+  number,
+  number,
   { rejectValue: string }
 >('roles/delete', async (roleId, thunkAPI) => {
   try {
     await instance.delete(`/api/roles/${roleId}`);
     return roleId;
   } catch (error: any) {
-    const message = 
-      (error.response && 
-        error.response.data && 
-        error.response.data.message) || 
-      error.message || 
+    const message =
+      (error.response?.data?.message) ||
+      error.message ||
       error.toString();
-      
     return thunkAPI.rejectWithValue(message);
   }
 });
 
-// Assign permission to role
+// Assign permissions to a role
 export const assignPermissionToRole = createAsyncThunk<
-  { roleId: number, permissionId: number }, 
-  { roleId: number, permissionId: number }, 
+  { roleId: number; permissionIds: number[] },
+  { roleId: number; permissionIds: number[] },
   { rejectValue: string }
->('roles/assignPermission', async ({ roleId, permissionId }, thunkAPI) => {
+>('roles/assignPermission', async ({ roleId, permissionIds }, thunkAPI) => {
   try {
-    await instance.post(`/api/roles/${roleId}/permissions`, { permissionId });
-    return { roleId, permissionId };
+    await instance.post(`/api/permissions/roles/${roleId}/permissions`, { permissionIds });
+    return { roleId, permissionIds };
   } catch (error: any) {
-    const message = 
-      (error.response && 
-        error.response.data && 
-        error.response.data.message) || 
-      error.message || 
+    const message =
+      (error.response?.data?.message) ||
+      error.message ||
       error.toString();
-      
     return thunkAPI.rejectWithValue(message);
   }
 });
 
 // Remove permission from role
 export const removePermissionFromRole = createAsyncThunk<
-  { roleId: number, permissionId: number }, 
-  { roleId: number, permissionId: number }, 
+  { roleId: number; permissionId: number },
+  { roleId: number; permissionId: number },
   { rejectValue: string }
 >('roles/removePermission', async ({ roleId, permissionId }, thunkAPI) => {
   try {
     await instance.delete(`/api/roles/${roleId}/permissions/${permissionId}`);
     return { roleId, permissionId };
   } catch (error: any) {
-    const message = 
-      (error.response && 
-        error.response.data && 
-        error.response.data.message) || 
-      error.message || 
+    const message =
+      (error.response?.data?.message) ||
+      error.message ||
       error.toString();
-      
     return thunkAPI.rejectWithValue(message);
   }
 });
@@ -190,7 +172,7 @@ export const rolesSlice = createSlice({
       .addCase(updateRole.fulfilled, (state, action: PayloadAction<Role>) => {
         state.isLoading = false;
         state.isSuccess = true;
-        state.roles = state.roles.map((role) => 
+        state.roles = state.roles.map((role) =>
           role.id === action.payload.id ? action.payload : role
         );
       })
@@ -213,27 +195,34 @@ export const rolesSlice = createSlice({
         state.message = action.payload as string;
       })
       .addCase(assignPermissionToRole.fulfilled, (state, action) => {
-        const { roleId, permissionId } = action.payload;
-        const roleIndex = state.roles.findIndex(role => role.id === roleId);
-        
+        const { roleId, permissionIds } = action.payload;
+        const roleIndex = state.roles.findIndex((role) => role.id === roleId);
+
         if (roleIndex !== -1) {
-          if (!state.roles[roleIndex].permissions) {
-            state.roles[roleIndex].permissions = [];
-          }
-          
-          // Add permission ID if not already in the role
-          if (!state.roles[roleIndex].permissions?.some(perm => perm.id === permissionId)) {
-            state.roles[roleIndex].permissions?.push({ id: permissionId } as Permission);
-          }
+          const existingPermissions = state.roles[roleIndex].permissions || [];
+
+          const newPermissions: Partial<Permission>[] = permissionIds
+          .filter((id) => !existingPermissions.some((p) => p.id === id))
+          .map((id) => ({
+            id,
+            action: 'read',
+            module_id: 0,
+          }));
+        
+        state.roles[roleIndex].permissions = [
+          ...existingPermissions,
+          ...newPermissions,
+        ] as Permission[];
+        
         }
       })
       .addCase(removePermissionFromRole.fulfilled, (state, action) => {
         const { roleId, permissionId } = action.payload;
-        const roleIndex = state.roles.findIndex(role => role.id === roleId);
-        
+        const roleIndex = state.roles.findIndex((role) => role.id === roleId);
+
         if (roleIndex !== -1 && state.roles[roleIndex].permissions) {
-          state.roles[roleIndex].permissions = state.roles[roleIndex].permissions?.filter(
-            perm => perm.id !== permissionId
+          state.roles[roleIndex].permissions = state.roles[roleIndex].permissions!.filter(
+            (perm) => perm.id !== permissionId
           );
         }
       });

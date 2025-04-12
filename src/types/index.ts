@@ -60,6 +60,7 @@ export interface User {
   }
   
   export interface Role {
+    groups: boolean;
     id: number;
     name: string;
     created_at?: Date;

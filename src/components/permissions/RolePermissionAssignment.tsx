@@ -54,7 +54,7 @@ const RolePermissionAssignment = ({ isOpen, onClose }: RolePermissionAssignmentP
     if (selectedRole && selectedPermission) {
       dispatch(assignPermissionToRole({ 
         roleId: selectedRole, 
-        permissionId: selectedPermission 
+        permissionIds: [selectedPermission] 
       }));
       setSelectedPermission(0);
     }
@@ -71,6 +71,7 @@ const RolePermissionAssignment = ({ isOpen, onClose }: RolePermissionAssignmentP
 
   // Helper function to get module name from ID
   const getModuleName = (moduleId: number): string => {
+    console.log(moduleId,'moduleId')
     const module = modules.find(m => m.id === moduleId);
     return module ? module.name : 'Unknown';
   };
